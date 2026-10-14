@@ -192,8 +192,7 @@ def parse_calendar(rows, year):
 
             result = str(row[column_index]).strip()
 
-            # Only accept actual two-digit results.
-            # Missing entries such as "--" are ignored.
+            # Accept only actual two-digit results.
             if not re.fullmatch(r"\d{2}", result):
                 continue
 
@@ -391,7 +390,9 @@ def fetch_history():
             source = "Saved history"
 
         if not saved:
-            errors.append("Could not save historical_results.json.")
+            errors.append(
+                "Could not save historical_results.json."
+            )
 
         return records, errors, source
 
@@ -455,12 +456,19 @@ def rank_candidates(number, history):
 # =========================================================
 
 def make_mixed_pyramid_number(length=None):
-    """Generate 10 random digits for a pyramid that always has four rows."""
-    return "".join(random.choice("123456789") for _ in range(10))
+    """
+    Generate 10 random digits from 1 to 9.
+    The generated pyramid is saved per input number.
+    """
+    return "".join(
+        random.choice("123456789")
+        for _ in range(10)
+    )
 
 
 def show_pyramid(number):
     """Display exactly four rows containing 1, 2, 3, and 4 boxes."""
+
     st.markdown("### 🔺 Number Pyramid")
 
     st.markdown(
@@ -471,6 +479,7 @@ def show_pyramid(number):
     )
 
     digits = list(str(number))[:10]
+
     while len(digits) < 10:
         digits.append(random.choice("123456789"))
 
@@ -479,12 +488,15 @@ def show_pyramid(number):
 
     for row_length in range(1, 5):
         html += '<div class="pyramid-row">'
+
         for digit in digits[position:position + row_length]:
             html += f'<span class="digit-box">{digit}</span>'
-        html += "</div>"
+
+        html += '</div>'
         position += row_length
 
-    html += "</div>"
+    html += '</div>'
+
     st.markdown(html, unsafe_allow_html=True)
 
 
@@ -541,9 +553,6 @@ st.caption("Enter a number to generate three possibilities")
 # ---------------------------------------------------------
 # LOAD HISTORICAL RESULTS QUIETLY
 # ---------------------------------------------------------
-# History remains saved in historical_results.json and is still
-# used internally to rank the third possibility. The date range,
-# source status, and history controls are intentionally hidden.
 
 history, history_errors, history_source = fetch_history()
 
@@ -593,7 +602,9 @@ if st.button(
         candidates = rank_candidates(original, history)
 
         if first == second:
-            st.error("The two fixed possibilities are identical.")
+            st.error(
+                "The two fixed possibilities are identical."
+            )
 
         elif not candidates:
             st.error(
@@ -604,6 +615,7 @@ if st.button(
         else:
             state = load_rotation_state()
 
+            # Rotate Possibility 3 for this input.
             try:
                 index = int(state.get(original, 0))
             except (TypeError, ValueError):
@@ -612,10 +624,17 @@ if st.button(
             third = candidates[index % len(candidates)]
 
             state[original] = index + 1
+
+            # FIX: Keep a separate, permanent pyramid for each input.
+            pyramid_key = f"pyramid_{original}"
+
+            if pyramid_key not in state:
+                state[pyramid_key] = make_mixed_pyramid_number()
+
+            # Save both rotation and pyramid state.
             save_rotation_state(state)
 
-            # Generate an independent mixed-digit pyramid.
-            pyramid_number = make_mixed_pyramid_number(len(original))
+            pyramid_number = state[pyramid_key]
 
             st.session_state["last_input"] = original
             st.session_state["last_results"] = [
@@ -640,7 +659,7 @@ if (
 
     st.markdown("---")
 
-    # Pyramid now uses mixed digits 1–9, not Possibility 1.
+    # The pyramid stays the same for the same input.
     show_pyramid(pyramid_number)
 
     st.markdown("## Your Three Possibilities")
@@ -648,7 +667,6 @@ if (
     show_result("Possibility 1 — Fixed", first)
     show_result("Possibility 2 — Fixed", second)
     show_result("Possibility 3 — Rotating", third)
-
 
 
 # =========================================================
